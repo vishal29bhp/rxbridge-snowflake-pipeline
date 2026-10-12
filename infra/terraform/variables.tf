@@ -57,8 +57,8 @@ variable "snowflake_storage_app_client_id" {
     00_admin_setup.sql, open AZURE_CONSENT_URL, accept it, and copy the client_id=... value
     from that URL. Leave empty on the first apply.
   EOT
-  type    = string
-  default = ""
+  type        = string
+  default     = ""
 }
 
 variable "snowflake_queue_app_client_id" {
