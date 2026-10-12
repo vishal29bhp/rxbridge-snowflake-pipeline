@@ -1,0 +1,33 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  python-and-dbt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11"}
+      - run: sudo apt-get update && sudo apt-get install -y tesseract-ocr
+      - run: pip install -r requirements-dev.txt
+      - name: Unit + regression tests (no cloud accounts needed)
+        run: pytest -q
+      - name: dbt parse (validates models, tests, contract, unit tests - no connection)
+        working-directory: dbt
+        env: {SNOWFLAKE_ACCOUNT: ci, SNOWFLAKE_USER: ci, SNOWFLAKE_PASSWORD: ci}
+        run: dbt parse --profiles-dir .
+
+  terraform:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra/terraform
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - run: terraform fmt -check -recursive
+      - run: terraform init -backend=false
+      - run: terraform validate
