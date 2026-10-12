@@ -1,0 +1,57 @@
+# Azure infrastructure (Terraform)
+
+Creates everything RxBridge needs **inside the existing resource group `rxbridge-snowflake`**:
+
+| Resource | Why |
+|---|---|
+| Storage account (private, TLS 1.2, versioning + 7-day soft delete) | Holds the original documents. Versioning means an overwritten original can always be recovered. |
+| Container `rx-archive` | `inbox/`, `_meta/`, `results/` |
+| Document Intelligence (F0 free tier) | Reads the documents (`prebuilt-read` + `prebuilt-layout`) |
+| Role assignment for you | Browse and upload files in the portal |
+| **Phase 2:** "Storage Blob Data Reader" for Snowflake's app | Lets Snowflake's stage read the container. Replaces the manual IAM click. |
+| Optional (`enable_automation = true`): Storage Queue + Event Grid | Feeds `snowflake/90_automation.sql` (auto-refresh + Snowpipe) |
+
+The resource group itself is read with a `data` source, so `terraform destroy` removes what Terraform
+created and **leaves the group alone**.
+
+## Phase 1 — create the resources
+
+```bash
+cd infra/terraform
+az login
+az account set --subscription "<your subscription>"
+cp terraform.tfvars.example terraform.tfvars      # set subscription_id
+terraform init
+terraform plan
+terraform apply
+
+terraform output -raw env_file >> ../../.env      # Azure values for the pipeline (contains keys)
+```
+Then add your Snowflake values to `.env` and continue with **README Step 3** (Snowflake admin setup).
+
+## Phase 2 — let Snowflake read the container
+
+`00_admin_setup.sql` ends with `DESC STORAGE INTEGRATION RX_AZURE_INT`. Open **AZURE_CONSENT_URL** and click
+**Accept**. The URL contains `client_id=<guid>`: put that guid in `terraform.tfvars`:
+
+```hcl
+snowflake_storage_app_client_id = "<guid from the consent URL>"
+```
+
+```bash
+terraform apply      # adds only the "Storage Blob Data Reader" role assignment
+```
+Wait a few minutes, then in Snowsight: `LIST @RX_DB.RAW.DOCS_STAGE;` should run without an access error.
+
+Why two phases? Snowflake's app only exists in your tenant after you accept the consent URL, and that
+needs the storage integration, which needs the storage account. So the dependency order is:
+storage → integration → consent → role assignment.
+
+## Notes
+
+- **State:** this uses local state (`terraform.tfstate`, git-ignored). It contains the storage keys, so keep
+  it safe. For a team, move it to an Azure Storage backend.
+- **Region:** if Document Intelligence isn't offered in your region, set `docintel_location`.
+- **Cost:** storage costs pennies; Document Intelligence F0 is free (500 pages/month); the Event Grid +
+  queue option costs fractions of a penny at this volume.
+- CI runs `terraform fmt -check` and `terraform validate` on every push.
