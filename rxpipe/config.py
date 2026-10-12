@@ -1,6 +1,8 @@
 """Settings come from environment variables (or a local .env file). No secrets in code.
 
-Copy .env.example to .env and fill it in. .env is git-ignored.
+Copy .env.example to .env and fill it in. .env is git-ignored. Secrets (storage connection string,
+Document Intelligence key, Snowflake password) come from Azure Key Vault when RX_KEY_VAULT_URL is
+set; see keyvault.py.
 """
 
 from __future__ import annotations
@@ -8,6 +10,8 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
+
+from . import keyvault
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
@@ -47,21 +51,18 @@ def _env(name: str, default: str | None = None) -> str | None:
 @dataclass
 class Settings:
     # --- Azure Blob Storage: where the original files, metadata and AI results live ---
-    azure_storage_conn: str | None = field(default_factory=lambda: _env("AZURE_STORAGE_CONNECTION_STRING"))
     azure_container: str = field(default_factory=lambda: _env("AZURE_CONTAINER", "rx-archive"))
 
     # --- Azure AI Document Intelligence: who reads the documents ---
     # RX_READER=azure (default) or offline (Tesseract on your laptop; free, for practice and tests)
     reader: str = field(default_factory=lambda: _env("RX_READER", "azure"))
     azure_di_endpoint: str | None = field(default_factory=lambda: _env("AZURE_DI_ENDPOINT"))
-    azure_di_key: str | None = field(default_factory=lambda: _env("AZURE_DI_KEY"))
     extract_model: str = field(default_factory=lambda: _env("RX_EXTRACT_MODEL", "prebuilt-read"))
     verify_model: str = field(default_factory=lambda: _env("RX_VERIFY_MODEL", "prebuilt-layout"))
 
     # --- Snowflake ---
     sf_account: str | None = field(default_factory=lambda: _env("SNOWFLAKE_ACCOUNT"))
     sf_user: str | None = field(default_factory=lambda: _env("SNOWFLAKE_USER"))
-    sf_password: str | None = field(default_factory=lambda: _env("SNOWFLAKE_PASSWORD"))
     sf_private_key_path: str | None = field(default_factory=lambda: _env("SNOWFLAKE_PRIVATE_KEY_PATH"))
     sf_role: str = field(default_factory=lambda: _env("SNOWFLAKE_ROLE", "RX_ENGINEER"))
     sf_warehouse: str = field(default_factory=lambda: _env("SNOWFLAKE_WAREHOUSE", "RX_LOAD_WH"))
@@ -76,6 +77,19 @@ class Settings:
     max_attempts: int = field(default_factory=lambda: int(_env("RX_MAX_ATTEMPTS", "2")))
 
     sample_dir: Path = field(default_factory=lambda: PROJECT_ROOT / "data" / "samples")
+
+    # --- Secrets: Key Vault first, .env as fallback. Read on first use, not when Settings is built ---
+    @property
+    def azure_storage_conn(self) -> str | None:
+        return keyvault.get_secret("AZURE_STORAGE_CONNECTION_STRING")
+
+    @property
+    def azure_di_key(self) -> str | None:
+        return keyvault.get_secret("AZURE_DI_KEY")
+
+    @property
+    def sf_password(self) -> str | None:
+        return keyvault.get_secret("SNOWFLAKE_PASSWORD")
 
 
 def get_settings() -> Settings:

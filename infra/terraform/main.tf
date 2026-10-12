@@ -3,6 +3,7 @@
 #   2. Azure AI Document Intelligence                             (reads the documents)
 #   3. optional: Storage Queue + Event Grid for automatic loading (90_automation.sql)
 #   4. phase 2: role assignments that let Snowflake read the container (replaces the portal clicks)
+#   5. Key Vault holding the pipeline's secrets (keyvault.tf)
 
 data "azurerm_resource_group" "rg" {
   name = var.resource_group_name
@@ -20,6 +21,7 @@ locals {
   location             = coalesce(var.location, data.azurerm_resource_group.rg.location)
   storage_account_name = coalesce(var.storage_account_name, "rxbridgedocs${random_string.suffix.result}")
   docintel_name        = "rx-docintel-${random_string.suffix.result}"
+  key_vault_name       = "rx-kv-${random_string.suffix.result}"
 
   tags = merge({
     project    = "rxbridge"

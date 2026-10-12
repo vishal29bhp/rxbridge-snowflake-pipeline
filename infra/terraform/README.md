@@ -7,6 +7,8 @@ Creates everything RxBridge needs **inside the existing resource group `rxbridge
 | Storage account (private, TLS 1.2, versioning + 7-day soft delete) | Holds the original documents. Versioning means an overwritten original can always be recovered. |
 | Container `rx-archive` | `inbox/`, `_meta/`, `results/` |
 | Document Intelligence (F0 free tier) | Reads the documents (`prebuilt-read` + `prebuilt-layout`) |
+| Key Vault (RBAC) + secrets `azure-storage-connection-string`, `azure-di-key` | Keeps keys out of `.env`. rxpipe reads them as you (`az login`). |
+| "Key Vault Secrets Officer" for you | Terraform writes the secrets, rxpipe reads them, you add `snowflake-password` |
 | Role assignment for you | Browse and upload files in the portal |
 | **Phase 2:** "Storage Blob Data Reader" for Snowflake's app | Lets Snowflake's stage read the container. Replaces the manual IAM click. |
 | Optional (`enable_automation = true`): Storage Queue + Event Grid | Feeds `snowflake/90_automation.sql` (auto-refresh + Snowpipe) |
@@ -25,9 +27,11 @@ terraform init
 terraform plan
 terraform apply
 
-terraform output -raw env_file >> ../../.env      # Azure values for the pipeline (contains keys)
+terraform output -raw env_file >> ../../.env      # vault URL + non-secret values (no keys)
 ```
-Then add your Snowflake values to `.env` and continue with **README Step 3** (Snowflake admin setup).
+Then add your non-secret Snowflake values to `.env`, store the password in the vault
+(`python -m rxpipe secret set SNOWFLAKE_PASSWORD`, from the project root) and continue with
+**README Step 3** (Snowflake admin setup).
 
 ## Phase 2 — let Snowflake read the container
 
@@ -49,9 +53,11 @@ storage → integration → consent → role assignment.
 
 ## Notes
 
-- **State:** this uses local state (`terraform.tfstate`, git-ignored). It contains the storage keys, so keep
-  it safe. For a team, move it to an Azure Storage backend.
+- **State:** this uses local state (`terraform.tfstate`, git-ignored). It still contains the storage and
+  Document Intelligence keys (Terraform has to know them to write them to the vault), so keep it safe. For a team, move it to an Azure Storage backend.
 - **Region:** Document Intelligence uses `docintel_location` (default `centralindia`), separate from `location`, because it isn't offered in every region (for example westindia).
-- **Cost:** storage costs pennies; Document Intelligence F0 is free (500 pages/month); the Event Grid +
+- **Key Vault:** soft delete is 7 days and purge protection is off, so `terraform destroy` followed by a
+  new apply works. Rotate a key in Azure, then `terraform apply` to copy the new value into the vault.
+- **Cost:** storage costs pennies; Key Vault standard is a few cents per 10,000 reads; Document Intelligence F0 is free (500 pages/month); the Event Grid +
   queue option costs fractions of a penny at this volume.
 - CI runs `terraform fmt -check` and `terraform validate` on every push.

@@ -73,6 +73,6 @@ def get_reader(settings):
     if settings.reader == "offline":
         return OfflineReader()
     if not (settings.azure_di_endpoint and settings.azure_di_key):
-        raise SystemExit("Set AZURE_DI_ENDPOINT and AZURE_DI_KEY in .env, or use RX_READER=offline.")
+        raise SystemExit("Set AZURE_DI_ENDPOINT and RX_KEY_VAULT_URL in .env (key: azure-di-key in Key Vault), or use RX_READER=offline.")
     return AzureReader(settings.azure_di_endpoint, settings.azure_di_key,
                        settings.extract_model, settings.verify_model)

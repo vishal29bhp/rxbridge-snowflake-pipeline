@@ -74,8 +74,9 @@ flowchart LR
 ### Step 1 — Azure resources (resource group `rxbridge-snowflake`)
 
 **Option A — Terraform (recommended).** One config creates the storage account, the `rx-archive`
-container and Document Intelligence in your existing resource group. It also writes the Azure values
-for your `.env`. See [infra/terraform/README.md](infra/terraform/README.md):
+container, Document Intelligence and a Key Vault in your existing resource group. The storage connection
+string and the Document Intelligence key go straight into Key Vault; your `.env` only gets the vault URL
+and other non-secret values. See [infra/terraform/README.md](infra/terraform/README.md):
 
 ```bash
 cd infra/terraform
@@ -83,8 +84,10 @@ az login && az account set --subscription "<your subscription>"
 cp terraform.tfvars.example terraform.tfvars        # set subscription_id
 terraform init && terraform apply
 cp ../../.env.example ../../.env                     # if you haven't yet
-terraform output -raw env_file >> ../../.env         # storage + Document Intelligence values
+terraform output -raw env_file >> ../../.env         # vault URL + non-secret Azure values
 cd ../..
+python -m rxpipe secret set SNOWFLAKE_PASSWORD       # after Step 2; skip if you use a key pair
+python -m rxpipe secret check                        # each secret should say "key vault"
 ```
 After Step 3, Terraform "phase 2" also grants Snowflake read access to the container, which replaces
 the portal click in Step 3.2.
@@ -110,6 +113,8 @@ az cognitiveservices account create -n rx-docintel -g $RG -l $LOC \
 az storage account show-connection-string -n $SA -g $RG -o tsv          # AZURE_STORAGE_CONNECTION_STRING
 az cognitiveservices account show -n rx-docintel -g $RG --query properties.endpoint -o tsv   # AZURE_DI_ENDPOINT
 az cognitiveservices account keys list -n rx-docintel -g $RG --query key1 -o tsv             # AZURE_DI_KEY
+# Option B has no Key Vault: put AZURE_STORAGE_CONNECTION_STRING and AZURE_DI_KEY in the
+# "local fallback" lines at the bottom of .env.
 az account show --query tenantId -o tsv                                    # AZURE_TENANT_ID
 echo $SA                                                                   # AZURE_STORAGE_ACCOUNT
 ```
@@ -359,4 +364,5 @@ or dbt Cloud.
 | `register` adds nothing | Files must be under `inbox/` in the container; run `upload` |
 | Everything stuck `QUEUED` | `extract` hasn't run, or `load-results` hasn't loaded its file |
 | dbt contract error on `fct_document` | Snowflake returned a different type; align the cast in `fct_document.sql` with `_marts.yml` |
-| Document Intelligence `401` | Check `AZURE_DI_ENDPOINT` / `AZURE_DI_KEY`; endpoint ends with `/` |
+| Document Intelligence `401` | Check `AZURE_DI_ENDPOINT` (ends with `/`) and `python -m rxpipe secret check` |
+| Key Vault `403 Forbidden` | Your login needs **Key Vault Secrets Officer** on the vault (Terraform grants it); run `az login` again |

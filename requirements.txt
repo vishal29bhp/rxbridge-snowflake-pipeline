@@ -1,6 +1,8 @@
 # Pipeline (runs on your laptop)
 azure-storage-blob>=12.20
 azure-ai-documentintelligence>=1.0.0
+azure-identity>=1.17
+azure-keyvault-secrets>=4.8
 snowflake-connector-python>=3.12
 dbt-core>=1.10,<2
 dbt-snowflake>=1.10,<2
