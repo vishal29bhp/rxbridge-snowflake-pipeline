@@ -28,6 +28,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: hashicorp/setup-terraform@v3
-      - run: terraform fmt -check -recursive
+      - name: terraform fmt (fails with the diff as an annotation)
+        run: |
+          terraform fmt -recursive -check -diff > fmt.diff || true
+          if [ -s fmt.diff ]; then
+            echo "::error title=terraform fmt::$(sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g' fmt.diff)"
+            exit 1
+          fi
       - run: terraform init -backend=false
       - run: terraform validate
