@@ -1,0 +1,29 @@
+version: 2
+models:
+  - name: stg_reads
+    description: Latest reading per report and step, fields picked from the VARIANT payload.
+    data_tests:
+      - dbt_unique_combination: {arguments: {columns: [report_id, step]}}
+  - name: stg_documents
+    columns:
+      - name: report_id
+        data_tests: [unique, not_null]
+  - name: stg_ai_medications
+    columns:
+      - name: step
+        data_tests:
+          - accepted_values: {arguments: {values: ['extract', 'verify']}}
+  - name: stg_medication_events_latest
+    columns:
+      - name: medication_line_id
+        data_tests: [unique, not_null]
+      - name: op
+        data_tests:
+          - accepted_values: {arguments: {values: ['I', 'U', 'D']}}
+  - name: stg_review_decisions
+    columns:
+      - name: report_id
+        data_tests: [unique]
+      - name: decision
+        data_tests:
+          - accepted_values: {arguments: {values: ['approved', 'rejected']}}

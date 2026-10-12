@@ -1,0 +1,217 @@
+version: 2
+
+models:
+  - name: fct_review_queue
+    description: Routing decision and review status for every document that was read.
+    columns:
+      - name: report_id
+        data_tests: [unique, not_null]
+      - name: route
+        data_tests:
+          - not_null
+          - accepted_values: {arguments: {values: ['auto_approve', 'review_fast', 'review_full']}}
+      - name: review_status
+        data_tests:
+          - accepted_values: {arguments: {values: ['approved', 'approved_by_reviewer', 'rejected', 'pending']}}
+
+  - name: dim_patient
+    description: SCD2 patient dimension with business-dated validity.
+    columns:
+      - name: patient_key
+        data_tests: [unique, not_null]
+      - name: nhs_number
+        data_tests:
+          - nhs_number_checksum:
+              config: {where: "nhs_number <> 'UNKNOWN'"}
+
+  - name: dim_drug
+    columns:
+      - name: drug_key
+        data_tests: [unique, not_null]
+
+  - name: dim_lab_test
+    columns:
+      - name: lab_test_key
+        data_tests: [unique, not_null]
+
+  - name: dim_prescriber
+    columns:
+      - name: prescriber_key
+        data_tests: [unique, not_null]
+
+  - name: dim_date
+    columns:
+      - name: date_key
+        data_tests: [unique, not_null]
+
+  - name: fct_medication
+    description: Grain - one medication line on one approved document.
+    columns:
+      - name: medication_line_id
+        data_tests: [unique, not_null]        # a duplicate line would show a drug prescribed twice
+      - name: patient_key
+        data_tests:
+          - not_null
+          - relationships: {arguments: {to: ref('dim_patient'), field: patient_key}}
+      - name: drug_key
+        data_tests:
+          - relationships: {arguments: {to: ref('dim_drug'), field: drug_key}}
+      - name: prescriber_key
+        data_tests:
+          - relationships: {arguments: {to: ref('dim_prescriber'), field: prescriber_key}}
+      - name: prescribed_date_key
+        data_tests:
+          - relationships: {arguments: {to: ref('dim_date'), field: date_key}}
+      - name: dose_unit
+        data_tests:
+          - accepted_values: {arguments: {values: ['mg', 'microgram', 'g', 'ml', 'unit', 'tablet']}}
+      - name: review_status
+        data_tests:
+          - accepted_values: {arguments: {values: ['approved', 'approved_by_reviewer']}}
+
+  - name: fct_lab_result
+    description: Grain - one test result on one approved lab report.
+    columns:
+      - name: lab_result_id
+        data_tests: [unique, not_null]
+      - name: patient_key
+        data_tests:
+          - relationships: {arguments: {to: ref('dim_patient'), field: patient_key}}
+      - name: flag
+        data_tests:
+          - accepted_values: {arguments: {values: ['High', 'Low', 'Normal']}}
+
+  - name: fct_clinical_note
+    columns:
+      - name: report_id
+        data_tests: [unique, not_null]
+
+  - name: fct_document
+    description: The published contract `rx.document.v1`. One row per approved source document.
+    config:
+      contract: {enforced: true}
+    columns:
+      - name: idempotency_key
+        data_type: varchar
+        constraints: [{type: not_null}]
+        data_tests: [unique]
+      - name: report_id
+        data_type: varchar
+        constraints: [{type: not_null}]
+        data_tests: [unique]
+      - name: doc_type
+        data_type: varchar
+        data_tests:
+          - accepted_values: {arguments: {values: ['prescription', 'lab_report', 'handwritten_note']}}
+      - name: patient_key
+        data_type: varchar
+        data_tests:
+          - relationships: {arguments: {to: ref('dim_patient'), field: patient_key}}
+      - name: document_date_key
+        data_type: number
+      - name: source_file
+        data_type: varchar
+      - name: mime_type
+        data_type: varchar
+      - name: extractor
+        data_type: varchar
+      - name: extract_model
+        data_type: varchar
+      - name: prompt_version
+        data_type: varchar
+      - name: route
+        data_type: varchar
+      - name: review_status
+        data_type: varchar
+        data_tests:
+          - accepted_values: {arguments: {values: ['approved', 'approved_by_reviewer']}}   # nothing else is publishable
+      - name: approved_at
+        data_type: timestamp_ntz
+
+  - name: outbox
+    description: Append-only publish queue. Downstream of fct_document, so its tests gate publishing.
+    columns:
+      - name: idempotency_key
+        data_tests: [unique, not_null]
+
+exposures:
+  - name: rxbridge_pre_consultation_brief
+    type: application
+    description: RxBridge's Memory agent reads approved history from the outbox to build doctors' briefs.
+    owner: {name: RxBridge platform}
+    depends_on: [ref('outbox'), ref('fct_document')]
+
+unit_tests:
+  - name: routing_handwriting_always_full_review
+    model: fct_review_queue
+    given:
+      - input: ref('int_report_scores')
+        rows:
+          - {report_id: r1, doc_type: handwritten_note, mime_type: image/png, read_method: ocr,
+             has_handwriting: true, all_quotes_found: true, med_disagreements: 0,
+             validator_flag_count: 0, nhs_checksum_ok: true, matches_manifest: true,
+             known_patient: true, patient_match_ok: true}
+      - input: ref('stg_review_decisions')
+        rows: []
+    expect:
+      rows:
+        - {report_id: r1, route: review_full, review_status: pending}
+
+  - name: routing_clean_typed_pdf_auto_approved
+    model: fct_review_queue
+    given:
+      - input: ref('int_report_scores')
+        rows:
+          - {report_id: r2, doc_type: prescription, mime_type: application/pdf, read_method: text_layer,
+             has_handwriting: false, all_quotes_found: true, med_disagreements: 0,
+             validator_flag_count: 0, nhs_checksum_ok: true, matches_manifest: true,
+             known_patient: true, patient_match_ok: true}
+      - input: ref('stg_review_decisions')
+        rows: []
+    expect:
+      rows:
+        - {report_id: r2, route: auto_approve, review_status: approved}
+
+  - name: routing_bad_dose_needs_a_person_then_reviewer_approves
+    model: fct_review_queue
+    given:
+      - input: ref('int_report_scores')
+        rows:
+          - {report_id: r3, doc_type: prescription, mime_type: image/jpeg, read_method: ocr,
+             has_handwriting: false, all_quotes_found: true, med_disagreements: 0,
+             validator_flag_count: 1, validator_flags: 'dose outside expected range',
+             nhs_checksum_ok: true, matches_manifest: true, known_patient: true, patient_match_ok: true}
+          - {report_id: r4, doc_type: prescription, mime_type: application/pdf, read_method: text_layer,
+             has_handwriting: false, all_quotes_found: true, med_disagreements: 0,
+             validator_flag_count: 0, nhs_checksum_ok: false, matches_manifest: false,
+             known_patient: true, patient_match_ok: false}
+      - input: ref('stg_review_decisions')
+        rows:
+          - {report_id: r3, decision: approved, reviewer: tester}
+    expect:
+      rows:
+        - {report_id: r3, route: review_full, review_status: approved_by_reviewer}
+        - {report_id: r4, route: review_full, review_status: pending}
+
+  - name: nhs_check_digit_catches_a_swapped_pair
+    model: int_check_patient
+    given:
+      - input: ref('stg_documents')
+        rows:
+          - {report_id: good, nhs_number: '9434765919', patient_name: Asha Patel}
+          - {report_id: other_valid, nhs_number: '4505577104', patient_name: Sanjay Rao}
+          - {report_id: mistyped, nhs_number: '4505577014', patient_name: Sanjay Rao}
+      - input: ref('stg_registry')
+        rows:
+          - {report_id: good, manifest_nhs_number: '9434765919'}
+          - {report_id: other_valid, manifest_nhs_number: '4505577104'}
+          - {report_id: mistyped, manifest_nhs_number: '4505577104'}
+      - input: source('raw', 'patients')
+        rows:
+          - {nhs_number: '9434765919', patient_name: Asha Patel}
+          - {nhs_number: '4505577104', patient_name: Sanjay Rao}
+    expect:
+      rows:
+        - {report_id: good, nhs_checksum_ok: true, matches_manifest: true, known_patient: true}
+        - {report_id: other_valid, nhs_checksum_ok: true, matches_manifest: true, known_patient: true}
+        - {report_id: mistyped, nhs_checksum_ok: false, matches_manifest: false, known_patient: true}

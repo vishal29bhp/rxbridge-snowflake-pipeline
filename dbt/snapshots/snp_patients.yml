@@ -1,0 +1,11 @@
+snapshots:
+  - name: snp_patients
+    description: >
+      SCD type 2 history of the patient list. A new version is kept every time a
+      patient's registered clinic changes; dim_patient turns these into business dates.
+    relation: source('raw', 'patients')
+    config:
+      schema: snapshots
+      unique_key: nhs_number
+      strategy: check
+      check_cols: [registered_clinic, clinic_since]

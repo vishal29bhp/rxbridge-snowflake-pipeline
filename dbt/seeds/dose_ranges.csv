@@ -1,0 +1,6 @@
+match_key,unit,min_dose,max_dose,note
+amoxicillin,mg,250,1000,per dose
+paracetamol,mg,500,1000,per dose
+metformin,mg,500,1000,per dose
+atorvastatin,mg,10,80,per dose
+salbutamol,microgram,100,1000,per dose (inhaled)

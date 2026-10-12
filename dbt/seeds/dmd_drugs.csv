@@ -1,0 +1,6 @@
+match_key,dmd_code,drug_name,drug_class,form,strength
+amoxicillin,VMP-0501,Amoxicillin 500mg capsules,Penicillin antibiotic,Capsule,500 mg
+paracetamol,VMP-0502,Paracetamol 500mg tablets,Analgesic,Tablet,500 mg
+metformin,VMP-0503,Metformin 500mg tablets,Biguanide (diabetes),Tablet,500 mg
+atorvastatin,VMP-0504,Atorvastatin 20mg tablets,Statin,Tablet,20 mg
+salbutamol,VMP-0505,Salbutamol 100micrograms/dose inhaler,Bronchodilator,Inhaler,100 microgram

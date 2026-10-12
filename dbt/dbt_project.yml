@@ -1,0 +1,39 @@
+name: rx_dbt
+version: "1.0.0"
+config-version: 2
+profile: rx_dbt
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+snapshot-paths: ["snapshots"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+
+# Layers and where they land in Snowflake (RX_DB.<schema>):
+#   seeds        -> REFERENCE     small reviewed reference data (dm+d drugs, dose ranges, ...)
+#   snapshots    -> SNAPSHOTS     SCD2 history of the patient list
+#   staging      -> STAGING       views: pick fields out of RAW, one model per source, no logic
+#   intermediate -> INTERMEDIATE  the quality checks and the cleaned medication lines
+#   marts        -> GOLD          dimensions, facts, the review queue and the outbox
+models:
+  rx_dbt:
+    staging:
+      +schema: staging
+      +materialized: view
+    intermediate:
+      +schema: intermediate
+      +materialized: table
+    marts:
+      +schema: gold
+      +materialized: table
+
+seeds:
+  rx_dbt:
+    +schema: reference
+    dose_ranges:
+      +column_types: {min_dose: float, max_dose: float}
+    expected_outcomes:
+      +column_types: {must_be_reviewed: boolean}
+
+vars:
+  run_regression: false     # dbt build --vars '{run_regression: true}' to run the sample-data regression tests

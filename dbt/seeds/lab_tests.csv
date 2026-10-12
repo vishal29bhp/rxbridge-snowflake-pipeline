@@ -1,0 +1,5 @@
+alias,test_code,test_name,unit
+hba1c,HBA1C,HbA1c,mmol/mol
+hbalc,HBA1C,HbA1c,mmol/mol
+total cholesterol,CHOL,Total cholesterol,mmol/L
+egfr,EGFR,eGFR,mL/min

@@ -1,0 +1,23 @@
+version: 2
+seeds:
+  - name: dmd_drugs
+    description: >
+      Illustrative extract of the NHS Dictionary of Medicines and Devices (dm+d).
+      In production, load the real dm+d release from NHS TRUD. match_key = generic name, lower case.
+    columns:
+      - name: match_key
+        data_tests: [unique, not_null]
+  - name: dose_ranges
+    description: Sanity bounds per single dose. Anything outside goes to a person, never straight to GOLD.
+    columns:
+      - name: match_key
+        data_tests: [unique, not_null]
+  - name: rx_abbreviations
+    description: UK prescribing abbreviations, expanded for the doctor's brief.
+  - name: lab_tests
+    description: Lab test catalogue. `alias` includes common OCR misreadings (HbAlc for HbA1c).
+    columns:
+      - name: alias
+        data_tests: [unique]
+  - name: expected_outcomes
+    description: Regression expectations for the synthetic sample set only (python -m rxpipe samples).

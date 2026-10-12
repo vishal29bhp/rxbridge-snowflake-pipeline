@@ -1,0 +1,12 @@
+source_file,expected_status,must_be_reviewed
+prescriptions/rx_typed_001.pdf,RETURNED,false
+prescriptions/rx_typed_001_rescan.pdf,DUPLICATE,
+lab/lab_typed_002.pdf,RETURNED,false
+photos/rx_photo_003.jpg,RETURNED,true
+notes/note_hand_004.png,RETURNED,true
+prescriptions/rx_typed_005.pdf,RETURNED,true
+prescriptions/rx_typed_006.pdf,RETURNED,true
+prescriptions/rx_corrupt_007.pdf,QUARANTINED,
+scans/rx_scanned_008.pdf,RETURNED,false
+prescriptions/rx_orphan_009.pdf,PENDING_MANIFEST,
+scans/lab_scan_010.tif,RETURNED,false

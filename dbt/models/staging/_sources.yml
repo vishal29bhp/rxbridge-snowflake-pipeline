@@ -1,0 +1,25 @@
+version: 2
+sources:
+  - name: raw
+    description: Landing zone written by the Snowflake SQL scripts and the review app. Never edited by dbt.
+    database: "{{ env_var('SNOWFLAKE_DATABASE', 'RX_DB') }}"
+    schema: raw
+    tables:
+      - name: file_registry
+        description: One row per document file; status moves PENDING_MANIFEST -> READY -> QUEUED -> RETURNED.
+        columns:
+          - name: report_id
+            data_tests: [unique, not_null]
+      - name: scan_manifest
+      - name: patients
+        columns:
+          - name: nhs_number
+            data_tests: [unique, not_null]
+      - name: ai_results
+        description: Every results line from Document Intelligence (extract, verify or error), as VARIANT.
+        config:
+          loaded_at_field: _loaded_at
+          freshness:
+            warn_after: {count: 24, period: hour}
+      - name: medication_events
+      - name: review_decisions

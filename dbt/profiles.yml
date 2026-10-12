@@ -1,0 +1,27 @@
+# dbt reads credentials from environment variables; `python -m rxpipe transform` loads them from .env.
+# Use target `dev` with a password, or `dev_keypair` with a private key (recommended).
+rx_dbt:
+  target: "{{ env_var('DBT_TARGET', 'dev') }}"
+  outputs:
+    dev:
+      type: snowflake
+      account: "{{ env_var('SNOWFLAKE_ACCOUNT') }}"
+      user: "{{ env_var('SNOWFLAKE_USER') }}"
+      password: "{{ env_var('SNOWFLAKE_PASSWORD') }}"
+      role: "{{ env_var('SNOWFLAKE_ROLE', 'RX_ENGINEER') }}"
+      warehouse: "{{ env_var('DBT_WAREHOUSE', 'RX_TRANSFORM_WH') }}"
+      database: "{{ env_var('SNOWFLAKE_DATABASE', 'RX_DB') }}"
+      schema: dbt_default
+      threads: 4
+      query_tag: rx_dbt
+    dev_keypair:
+      type: snowflake
+      account: "{{ env_var('SNOWFLAKE_ACCOUNT') }}"
+      user: "{{ env_var('SNOWFLAKE_USER') }}"
+      private_key_path: "{{ env_var('SNOWFLAKE_PRIVATE_KEY_PATH') }}"
+      role: "{{ env_var('SNOWFLAKE_ROLE', 'RX_ENGINEER') }}"
+      warehouse: "{{ env_var('DBT_WAREHOUSE', 'RX_TRANSFORM_WH') }}"
+      database: "{{ env_var('SNOWFLAKE_DATABASE', 'RX_DB') }}"
+      schema: dbt_default
+      threads: 4
+      query_tag: rx_dbt
