@@ -47,5 +47,5 @@ class BlobStore:
 
 def get_blob_store(settings) -> BlobStore:
     if not settings.azure_storage_conn:
-        raise SystemExit("Set AZURE_STORAGE_CONNECTION_STRING in .env (Azure portal > Storage account > Access keys).")
+        raise SystemExit("No storage connection string: set RX_KEY_VAULT_URL in .env (python -m rxpipe secret check), or AZURE_STORAGE_CONNECTION_STRING for a local run.")
     return BlobStore(settings.azure_storage_conn, settings.azure_container)

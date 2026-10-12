@@ -45,7 +45,7 @@ class Snowflake:
         elif settings.sf_password:
             kwargs["password"] = settings.sf_password
         else:
-            raise SystemExit("Set SNOWFLAKE_PRIVATE_KEY_PATH or SNOWFLAKE_PASSWORD in .env")
+            raise SystemExit("Set SNOWFLAKE_PRIVATE_KEY_PATH in .env, or store the password: python -m rxpipe secret set SNOWFLAKE_PASSWORD")
         self.conn = snowflake.connector.connect(**kwargs)
 
     def query(self, sql: str, params: Sequence[Any] | None = None) -> list[dict]:

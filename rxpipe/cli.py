@@ -155,7 +155,11 @@ def cmd_transform(a):
     if a.regression:
         cmd += ["--vars", "{run_regression: true}"]
     print("$", " ".join(cmd))
-    sys.exit(subprocess.call(cmd, env=os.environ.copy()))
+    env = os.environ.copy()
+    password = get_settings().sf_password      # dbt reads env_var('SNOWFLAKE_PASSWORD'); hand it the vault's value
+    if password:
+        env["SNOWFLAKE_PASSWORD"] = password
+    sys.exit(subprocess.call(cmd, env=env))
 
 
 def cmd_status(a):
@@ -229,6 +233,25 @@ def cmd_reset(a):
     _run_script("99_reset.sql")
 
 
+def cmd_secret(a):
+    from . import keyvault
+
+    if a.action == "set":
+        if a.name not in keyvault.SECRETS:
+            raise SystemExit(f"Unknown secret {a.name}. One of: {', '.join(keyvault.SECRETS)}")
+        import getpass
+
+        value = getpass.getpass(f"{a.name} (input hidden): ")
+        if not value:
+            raise SystemExit("Nothing entered; vault unchanged.")
+        keyvault.set_secret(a.name, value)
+        print(f"Stored {a.name} in {keyvault.vault_url()} as '{keyvault.SECRETS[a.name]}'")
+        return
+    print(f"Key Vault: {keyvault.vault_url() or '(RX_KEY_VAULT_URL not set: using .env only)'}")
+    for name, vault_name in keyvault.SECRETS.items():
+        print(f"  {name:33s} {keyvault.source(name):10s} ({vault_name})")
+
+
 def cmd_run(a):
     """Stages 2-7 in one go, for when you've understood them one by one."""
     for step in (cmd_load_meta, cmd_register):
@@ -283,6 +306,9 @@ def main(argv=None):
     sp = add("sql", cmd_sql, "run one SQL query and print the result")
     sp.add_argument("query")
     add("deploy-app", cmd_deploy_app, "deploy the Streamlit review app to Snowflake")
+    sp = add("secret", cmd_secret, "check where each secret comes from, or store one in Key Vault")
+    sp.add_argument("action", choices=["check", "set"])
+    sp.add_argument("name", nargs="?", help="for set: e.g. SNOWFLAKE_PASSWORD")
     add("run", cmd_run, "stages 2-6 in one go")
     sp = add("reset", cmd_reset, "empty the pipeline to start the walkthrough again")
     sp.add_argument("--yes", action="store_true")
@@ -290,6 +316,8 @@ def main(argv=None):
     a = p.parse_args(argv)
     if a.command == "review" and a.action != "list" and not a.target:
         p.error(f"review {a.action} needs a report_id or medication_line_id")
+    if a.command == "secret" and a.action == "set" and not a.name:
+        p.error("secret set needs a name, e.g. SNOWFLAKE_PASSWORD")
     a.fn(a)
 
 

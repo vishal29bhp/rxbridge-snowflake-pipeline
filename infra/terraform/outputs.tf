@@ -23,20 +23,26 @@ output "queue_uri" {
   value = var.enable_automation ? "https://${azurerm_storage_account.docs.name}.queue.core.windows.net/${var.queue_name}" : null
 }
 
-# Everything the pipeline needs, in .env format:
+output "key_vault_name" {
+  value = azurerm_key_vault.rx.name
+}
+
+output "key_vault_url" {
+  value = azurerm_key_vault.rx.vault_uri
+}
+
+# Everything the pipeline needs, in .env format. No secrets: those are in Key Vault.
 #   terraform output -raw env_file >> ../../.env
 output "env_file" {
-  description = "Append to the project's .env. Contains secrets: never commit it."
-  sensitive   = true
+  description = "Append to the project's .env. Secrets are not in it; rxpipe reads them from Key Vault."
   value       = <<-EOT
 
     # ---- written by infra/terraform ----
-    AZURE_STORAGE_CONNECTION_STRING=${azurerm_storage_account.docs.primary_connection_string}
+    RX_KEY_VAULT_URL=${azurerm_key_vault.rx.vault_uri}
     AZURE_STORAGE_ACCOUNT=${azurerm_storage_account.docs.name}
     AZURE_CONTAINER=${var.container_name}
     AZURE_TENANT_ID=${data.azurerm_client_config.current.tenant_id}
     AZURE_QUEUE=${var.queue_name}
     AZURE_DI_ENDPOINT=${azurerm_cognitive_account.docintel.endpoint}
-    AZURE_DI_KEY=${azurerm_cognitive_account.docintel.primary_access_key}
   EOT
 }
