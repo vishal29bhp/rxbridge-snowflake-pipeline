@@ -1,0 +1,18 @@
+{
+  "prescriptions/rx_typed_001.pdf::extract": 1.0,
+  "prescriptions/rx_typed_001.pdf::verify": 1.0,
+  "lab/lab_typed_002.pdf::extract": 1.0,
+  "lab/lab_typed_002.pdf::verify": 0.7647,
+  "photos/rx_photo_003.jpg::extract": 1.0,
+  "photos/rx_photo_003.jpg::verify": 1.0,
+  "notes/note_hand_004.png::extract": 1.0,
+  "notes/note_hand_004.png::verify": 1.0,
+  "prescriptions/rx_typed_005.pdf::extract": 1.0,
+  "prescriptions/rx_typed_005.pdf::verify": 1.0,
+  "prescriptions/rx_typed_006.pdf::extract": 1.0,
+  "prescriptions/rx_typed_006.pdf::verify": 1.0,
+  "scans/rx_scanned_008.pdf::extract": 1.0,
+  "scans/rx_scanned_008.pdf::verify": 1.0,
+  "scans/lab_scan_010.tif::extract": 0.9167,
+  "scans/lab_scan_010.tif::verify": 0.9167
+}

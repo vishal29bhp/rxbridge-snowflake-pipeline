@@ -1,0 +1,173 @@
+{
+  "prescriptions/rx_typed_001.pdf": {
+    "doc_type": "prescription",
+    "nhs_number": "9434765919",
+    "document_date": "2019-04-03",
+    "medications": [
+      {
+        "drug_name": "Amoxicillin 500mg capsules",
+        "dose_value": 500,
+        "dose_unit": "mg",
+        "frequency": "tds",
+        "duration_days": 7,
+        "quantity": 21
+      },
+      {
+        "drug_name": "Paracetamol 500mg tablets",
+        "dose_value": 1000,
+        "dose_unit": "mg",
+        "frequency": "qds prn",
+        "duration_days": 5,
+        "quantity": 32
+      }
+    ],
+    "lab_results": []
+  },
+  "lab/lab_typed_002.pdf": {
+    "doc_type": "lab_report",
+    "nhs_number": "4857773457",
+    "document_date": "2024-01-15",
+    "medications": [],
+    "lab_results": [
+      {
+        "test_name": "HbA1c",
+        "result_value": 52,
+        "unit": "mmol/mol",
+        "ref_low": 20,
+        "ref_high": 41
+      },
+      {
+        "test_name": "Total cholesterol",
+        "result_value": 5.8,
+        "unit": "mmol/L",
+        "ref_low": null,
+        "ref_high": 5.0
+      },
+      {
+        "test_name": "eGFR",
+        "result_value": 78,
+        "unit": "mL/min",
+        "ref_low": 60,
+        "ref_high": null
+      }
+    ]
+  },
+  "photos/rx_photo_003.jpg": {
+    "doc_type": "prescription",
+    "nhs_number": "9434765919",
+    "document_date": "2022-08-15",
+    "medications": [
+      {
+        "drug_name": "Metformin 500mg tablets",
+        "dose_value": 5000,
+        "dose_unit": "mg",
+        "frequency": "bd",
+        "duration_days": 28,
+        "quantity": 56
+      },
+      {
+        "drug_name": "Atorvastatin 20mg tablets",
+        "dose_value": 20,
+        "dose_unit": "mg",
+        "frequency": "on",
+        "duration_days": 28,
+        "quantity": 28
+      }
+    ],
+    "lab_results": []
+  },
+  "notes/note_hand_004.png": {
+    "doc_type": "handwritten_note",
+    "nhs_number": "4857773457",
+    "document_date": "2024-01-22",
+    "medications": [
+      {
+        "drug_name": "Salbutamol inhaler",
+        "dose_value": 200,
+        "dose_unit": "microgram",
+        "frequency": "prn",
+        "duration_days": null,
+        "quantity": null
+      }
+    ],
+    "lab_results": []
+  },
+  "prescriptions/rx_typed_005.pdf": {
+    "doc_type": "prescription",
+    "nhs_number": "4505577014",
+    "document_date": "2023-09-12",
+    "medications": [
+      {
+        "drug_name": "Amoxicillin 500mg capsules",
+        "dose_value": 500,
+        "dose_unit": "mg",
+        "frequency": "tds",
+        "duration_days": 5,
+        "quantity": 15
+      }
+    ],
+    "lab_results": []
+  },
+  "prescriptions/rx_typed_006.pdf": {
+    "doc_type": "prescription",
+    "nhs_number": "4010232137",
+    "document_date": "2023-03-10",
+    "medications": [
+      {
+        "drug_name": "Zyntrax 10mg tablets",
+        "dose_value": 10,
+        "dose_unit": "mg",
+        "frequency": "od",
+        "duration_days": 30,
+        "quantity": 30
+      }
+    ],
+    "lab_results": []
+  },
+  "scans/rx_scanned_008.pdf": {
+    "doc_type": "prescription",
+    "nhs_number": "4010232137",
+    "document_date": "2024-06-05",
+    "medications": [
+      {
+        "drug_name": "Atorvastatin 20mg tablets",
+        "dose_value": 20,
+        "dose_unit": "mg",
+        "frequency": "on",
+        "duration_days": 28,
+        "quantity": 28
+      },
+      {
+        "drug_name": "Metformin 500mg tablets",
+        "dose_value": 500,
+        "dose_unit": "mg",
+        "frequency": "bd",
+        "duration_days": 28,
+        "quantity": 56
+      }
+    ],
+    "lab_results": []
+  },
+  "scans/lab_scan_010.tif": {
+    "doc_type": "lab_report",
+    "nhs_number": "4010232137",
+    "document_date": "2024-06-05",
+    "medications": [],
+    "lab_results": [
+      {
+        "test_name": "HbA1c",
+        "result_value": 48,
+        "unit": "mmol/mol",
+        "ref_low": 20,
+        "ref_high": 41
+      },
+      {
+        "test_name": "eGFR",
+        "result_value": 85,
+        "unit": "mL/min",
+        "ref_low": 60,
+        "ref_high": null
+      }
+    ]
+  }
+}
