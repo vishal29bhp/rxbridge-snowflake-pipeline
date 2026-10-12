@@ -218,6 +218,17 @@ def cmd_deploy_app(a):
         sf.close()
 
 
+def cmd_reset(a):
+    if not a.yes:
+        raise SystemExit("This empties the RAW tables, drops the dbt schemas and deletes results/ in Azure. "
+                         "Re-run with --yes to confirm. Your original documents are kept.")
+    from .blob import get_blob_store
+
+    n = get_blob_store(get_settings()).delete_prefix("results/")
+    print(f"Deleted {n} results file(s) from Azure.")
+    _run_script("99_reset.sql")
+
+
 def cmd_run(a):
     """Stages 2-7 in one go, for when you've understood them one by one."""
     for step in (cmd_load_meta, cmd_register):
@@ -273,6 +284,8 @@ def main(argv=None):
     sp.add_argument("query")
     add("deploy-app", cmd_deploy_app, "deploy the Streamlit review app to Snowflake")
     add("run", cmd_run, "stages 2-6 in one go")
+    sp = add("reset", cmd_reset, "empty the pipeline to start the walkthrough again")
+    sp.add_argument("--yes", action="store_true")
 
     a = p.parse_args(argv)
     if a.command == "review" and a.action != "list" and not a.target:

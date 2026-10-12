@@ -13,9 +13,13 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
 def _load_dotenv() -> None:
+    """KEY=VALUE lines from .env. A later line wins over an earlier one, so values appended by
+    `terraform output -raw env_file >> .env` replace the blanks copied from .env.example.
+    Real environment variables always win over the file."""
     env_file = PROJECT_ROOT / ".env"
     if not env_file.exists():
         return
+    values: dict[str, str] = {}
     for line in env_file.read_text().splitlines():
         line = line.strip()
         if not line or line.startswith("#") or "=" not in line:
@@ -26,7 +30,10 @@ def _load_dotenv() -> None:
             value = value[1:].split(value[0], 1)[0]   # quoted: keep everything inside the quotes
         else:
             value = value.split(" #", 1)[0].strip()   # unquoted: drop an inline "# comment"
-        os.environ.setdefault(key.strip(), value)
+        if value or key.strip() not in values:
+            values[key.strip()] = value
+    for key, value in values.items():
+        os.environ.setdefault(key, value)
 
 
 _load_dotenv()

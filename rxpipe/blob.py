@@ -35,6 +35,12 @@ class BlobStore:
     def download(self, blob_name: str) -> bytes:
         return self.container.download_blob(blob_name).readall()
 
+    def delete_prefix(self, prefix: str) -> int:
+        names = self.list(prefix)
+        for n in names:
+            self.container.delete_blob(n)
+        return len(names)
+
     def list(self, prefix: str = "") -> list[str]:
         return [b.name for b in self.container.list_blobs(name_starts_with=prefix)]
 
