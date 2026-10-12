@@ -1,0 +1,12 @@
+# Pipeline (runs on your laptop)
+azure-storage-blob>=12.20
+azure-ai-documentintelligence>=1.0.0
+snowflake-connector-python>=3.12
+dbt-core>=1.10,<2
+dbt-snowflake>=1.10,<2
+# Sample documents and the offline reader (practice runs and tests; no cloud cost)
+reportlab>=4.0
+pillow>=10.0
+pypdf>=4.0
+pypdfium2>=4.0
+pytesseract>=0.3.10

@@ -1,0 +1,17 @@
+# secrets and local data
+.env
+*.p8
+*.pem
+data/
+# python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+# dbt
+dbt/target/
+dbt/logs/
+dbt/dbt_packages/
+dbt/.user.yml
+logs/
