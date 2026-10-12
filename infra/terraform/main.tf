@@ -69,7 +69,7 @@ resource "azurerm_storage_container" "archive" {
 resource "azurerm_cognitive_account" "docintel" {
   name                  = local.docintel_name
   resource_group_name   = data.azurerm_resource_group.rg.name
-  location              = coalesce(var.docintel_location, local.location)
+  location              = var.docintel_location
   kind                  = "FormRecognizer"
   sku_name              = var.docintel_sku
   custom_subdomain_name = local.docintel_name

@@ -51,7 +51,7 @@ storage → integration → consent → role assignment.
 
 - **State:** this uses local state (`terraform.tfstate`, git-ignored). It contains the storage keys, so keep
   it safe. For a team, move it to an Azure Storage backend.
-- **Region:** if Document Intelligence isn't offered in your region, set `docintel_location`.
+- **Region:** Document Intelligence uses `docintel_location` (default `centralindia`), separate from `location`, because it isn't offered in every region (for example westindia).
 - **Cost:** storage costs pennies; Document Intelligence F0 is free (500 pages/month); the Event Grid +
   queue option costs fractions of a penny at this volume.
 - CI runs `terraform fmt -check` and `terraform validate` on every push.
