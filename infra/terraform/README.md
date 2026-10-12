@@ -6,7 +6,7 @@ Creates everything RxBridge needs **inside the existing resource group `rxbridge
 |---|---|
 | Storage account (private, TLS 1.2, versioning + 7-day soft delete) | Holds the original documents. Versioning means an overwritten original can always be recovered. |
 | Container `rx-archive` | `inbox/`, `_meta/`, `results/` |
-| Document Intelligence (F0 free tier) | Reads the documents (`prebuilt-read` + `prebuilt-layout`) |
+| Document Intelligence (F0 free tier, in `docintel_location`, default `centralindia`) | Reads the documents (`prebuilt-read` + `prebuilt-layout`) |
 | Key Vault (RBAC) + secrets `azure-storage-connection-string`, `azure-di-key` | Keeps keys out of `.env`. rxpipe reads them as you (`az login`). |
 | "Key Vault Secrets Officer" for you | Terraform writes the secrets, rxpipe reads them, you add `snowflake-password` |
 | Role assignment for you | Browse and upload files in the portal |
@@ -18,17 +18,21 @@ created and **leaves the group alone**.
 
 ## Phase 1 — create the resources
 
-```bash
-cd infra/terraform
+Windows PowerShell:
+
+```powershell
+cd infra\terraform
 az login
 az account set --subscription "<your subscription>"
-cp terraform.tfvars.example terraform.tfvars      # set subscription_id
+Copy-Item terraform.tfvars.example terraform.tfvars          # set subscription_id
 terraform init
 terraform plan
 terraform apply
 
-terraform output -raw env_file >> ../../.env      # vault URL + non-secret values (no keys)
+terraform output -raw env_file | Add-Content -Encoding utf8 ..\..\.env   # vault URL + non-secret values (no keys)
 ```
+Use `Add-Content`, not `>>`: Windows PowerShell 5.1 writes UTF-16 with `>>`. On macOS/Linux:
+`cp terraform.tfvars.example terraform.tfvars` and `terraform output -raw env_file >> ../../.env`.
 Then add your non-secret Snowflake values to `.env`, store the password in the vault
 (`python -m rxpipe secret set SNOWFLAKE_PASSWORD`, from the project root) and continue with
 **README Step 3** (Snowflake admin setup).

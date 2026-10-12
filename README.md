@@ -15,7 +15,9 @@ All documents, names and NHS numbers in this repo are synthetic.
 
 ```mermaid
 flowchart LR
-    subgraph AZ[Azure Blob: rx-archive]
+    LAP[rxpipe CLI<br>your laptop]
+    KV[Azure Key Vault<br>storage conn string,<br>DI key, Snowflake password]
+    subgraph AZ[Azure Blob: rx-archive · westindia]
         IN[inbox/<br>PDFs, photos, scans, notes]
         META[_meta/<br>manifest.csv, patients.csv]
         RES[results/<br>JSONL per batch]
@@ -27,13 +29,18 @@ flowchart LR
         GOLD[GOLD<br>dims + facts + outbox]
         APP[Streamlit review app]
     end
-    DI[Azure Document<br>Intelligence<br>read + layout]
+    DI[Azure Document<br>Intelligence · centralindia<br>read + layout]
 
+    KV -. secrets at run time .-> LAP
+    LAP -- 1 upload --> IN
+    LAP -- 1 upload --> META
     META -- 2 COPY INTO --> SF
     IN -- 3 directory table + UDF --> REG
     REG -- 4 BUILD_BATCH --> REG
-    REG -- 5 queued files --> DI
-    DI -- 5 two readings --> RES
+    REG -- 5 queued files --> LAP
+    LAP -- 5 extract --> DI
+    DI -- 5 two readings --> LAP
+    LAP -- 5 JSONL --> RES
     RES -- 6 COPY INTO --> RAWT
     RAWT -- 7 dbt build --> DBT --> GOLD
     DBT -- review_full / review_fast --> APP
@@ -50,6 +57,11 @@ flowchart LR
 | 6 | Load results | `load-results` | Snowflake | `COPY INTO` the JSON as VARIANT and moves statuses on (RETURNED, retry, or QUARANTINED). |
 | 7 | Transform | `transform` | dbt on Snowflake | Runs the quality checks, routes each document, builds the dimensions and facts, and runs the tests. A failing test stops publishing. |
 | 8 | Review | `review …` or the Streamlit app | Snowflake | People approve, correct or reject the flagged documents. Every action is appended to RAW, then `transform` again. |
+
+The storage account and Key Vault are in **westindia** (the resource group's region). Document Intelligence runs in
+**centralindia** (Terraform `docintel_location`), because it isn't offered in westindia; only page text
+crosses regions. `rxpipe` reads the storage connection string, the Document Intelligence key and the
+Snowflake password from **Key Vault** as you (`az login`), so `.env` holds no secrets.
 
 ### What each sample document tests
 
@@ -76,28 +88,35 @@ flowchart LR
 **Option A — Terraform (recommended).** One config creates the storage account, the `rx-archive`
 container, Document Intelligence and a Key Vault in your existing resource group. The storage connection
 string and the Document Intelligence key go straight into Key Vault; your `.env` only gets the vault URL
-and other non-secret values. See [infra/terraform/README.md](infra/terraform/README.md):
+and other non-secret values. See [infra/terraform/README.md](infra/terraform/README.md).
 
-```bash
-cd infra/terraform
-az login && az account set --subscription "<your subscription>"
-cp terraform.tfvars.example terraform.tfvars        # set subscription_id
-terraform init && terraform apply
-cp ../../.env.example ../../.env                     # if you haven't yet
-terraform output -raw env_file >> ../../.env         # vault URL + non-secret Azure values
-cd ../..
-python -m rxpipe secret set SNOWFLAKE_PASSWORD       # after Step 2; skip if you use a key pair
-python -m rxpipe secret check                        # each secret should say "key vault"
+Windows PowerShell:
+
+```powershell
+cd infra\terraform
+az login
+az account set --subscription "<your subscription>"
+Copy-Item terraform.tfvars.example terraform.tfvars          # set subscription_id
+terraform init
+terraform apply
+if (-not (Test-Path ..\..\.env)) { Copy-Item ..\..\.env.example ..\..\.env }
+terraform output -raw env_file | Add-Content -Encoding utf8 ..\..\.env   # vault URL + non-secret values
+cd ..\..
+python -m rxpipe secret set SNOWFLAKE_PASSWORD               # after Step 2; skip if you use a key pair
+python -m rxpipe secret check                                # each secret should say "key vault"
 ```
+Use `Add-Content`, not `>>`: in Windows PowerShell 5.1, `>>` writes UTF-16 and `.env` stops loading.
+On macOS/Linux the same steps are `cp` and `terraform output -raw env_file >> ../../.env`.
 After Step 3, Terraform "phase 2" also grants Snowflake read access to the container, which replaces
 the portal click in Step 3.2.
 
 **Option B — Azure CLI.** Run these in [Azure Cloud Shell](https://shell.azure.com). Pick the **same region
-as your Snowflake account**:
+as your resource group** for storage, and a region that offers Document Intelligence for `DI_LOC`:
 
 ```bash
 RG=rxbridge-snowflake
-LOC=centralindia                      # same region as Snowflake
+LOC=westindia                         # the resource group's region
+DI_LOC=centralindia                   # Document Intelligence isn't offered in westindia
 SA=rxbridgedocs$RANDOM                # storage account names are global: lowercase, 3-24 chars
 
 # Storage account + container (private: no public blob access)
@@ -106,7 +125,7 @@ az storage account create -n $SA -g $RG -l $LOC --sku Standard_LRS --kind Storag
 az storage container create --account-name $SA -n rx-archive --auth-mode key
 
 # Document Intelligence (F0 = free tier, enough for the samples)
-az cognitiveservices account create -n rx-docintel -g $RG -l $LOC \
+az cognitiveservices account create -n rx-docintel -g $RG -l $DI_LOC \
    --kind FormRecognizer --sku F0 --custom-domain rx-docintel-$RANDOM --yes
 
 # Values for your .env
@@ -119,18 +138,23 @@ az account show --query tenantId -o tsv                                    # AZU
 echo $SA                                                                   # AZURE_STORAGE_ACCOUNT
 ```
 
-If Document Intelligence isn't offered in your region, use the nearest region that has it. Only the page
-text crosses regions, not your Snowflake data.
+Only the page text crosses regions, not your Snowflake data.
 
 ### Step 2 — Your laptop
 
-```bash
+Windows PowerShell:
+
+```powershell
 git clone https://github.com/vishal29bhp/rxbridge-snowflake-pipeline.git
 cd rxbridge-snowflake-pipeline
-python -m venv .venv && source .venv/bin/activate        # Windows: .venv\Scripts\activate
+python -m venv .venv
+.venv\Scripts\Activate.ps1
 pip install -r requirements-dev.txt
-cp .env.example .env                                     # then fill it in with the values from Step 1
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }   # Step 1 already appended the Azure values
 ```
+Then fill in the Snowflake values in `.env` (account, user, role…). Secrets don't go in `.env`: store the
+password with `python -m rxpipe secret set SNOWFLAKE_PASSWORD` and confirm with `python -m rxpipe secret check`.
+On macOS/Linux, activate with `source .venv/bin/activate` and copy with `cp`.
 
 Optional, but needed for the regression tests and the free offline reader: install
 **Tesseract OCR** (Windows: the UB Mannheim installer; macOS: `brew install tesseract`;
@@ -328,13 +352,13 @@ This empties RAW, drops the dbt schemas and deletes `results/`. Your documents s
 ## Project layout
 
 ```
-rxpipe/            Python: samples, Azure Blob, Document Intelligence readers, extract step, review CLI
+rxpipe/            Python: samples, Azure Blob, Document Intelligence readers, extract step, review CLI, Key Vault secrets
 snowflake/         SQL, numbered in run order (00 admin, 01 objects, 10-40 pipeline stages, 90 automation)
 snowflake/streamlit/review_app.py   Streamlit in Snowflake review queue
 dbt/               staging → intermediate (checks) → marts (GOLD), seeds, snapshot, tests, contract
 tests/             unit, regression (golden set), integration
 docs/              manual test plan
-infra/terraform/   Azure resources in rxbridge-snowflake (storage, Document Intelligence, access)
+infra/terraform/   Azure resources in rxbridge-snowflake (storage, Document Intelligence, Key Vault, access)
 .github/workflows/ CI: tests, dbt parse, terraform validate
 ```
 
@@ -354,6 +378,7 @@ or dbt Cloud.
 - **Document Intelligence F0:** free, but limited to 500 pages a month. Each sample run uses about 20 pages,
   because every page is read twice.
 - **Blob storage:** pennies.
+- **Key Vault (standard):** a few cents per 10,000 secret reads.
 
 ## Troubleshooting
 
@@ -365,4 +390,6 @@ or dbt Cloud.
 | Everything stuck `QUEUED` | `extract` hasn't run, or `load-results` hasn't loaded its file |
 | dbt contract error on `fct_document` | Snowflake returned a different type; align the cast in `fct_document.sql` with `_marts.yml` |
 | Document Intelligence `401` | Check `AZURE_DI_ENDPOINT` (ends with `/`) and `python -m rxpipe secret check` |
+| Document Intelligence: region or SKU not available | Set `docintel_location` in `terraform.tfvars` to a region that offers it (default `centralindia`) |
+| `.env` values not picked up on Windows | It was appended with `>>` in PowerShell 5.1 (UTF-16). Re-save `.env` as UTF-8, or append with `Add-Content -Encoding utf8` |
 | Key Vault `403 Forbidden` | Your login needs **Key Vault Secrets Officer** on the vault (Terraform grants it); run `az login` again |
