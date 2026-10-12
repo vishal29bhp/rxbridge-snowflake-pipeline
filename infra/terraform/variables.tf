@@ -34,9 +34,9 @@ variable "docintel_sku" {
 }
 
 variable "docintel_location" {
-  description = "Region for Document Intelligence if it is not offered in var.location. Null = same region."
+  description = "Region for Document Intelligence. Microsoft.CognitiveServices/accounts is not offered in westindia, so it defaults to centralindia while the rest of the stack stays on var.location."
   type        = string
-  default     = null
+  default     = "centralindia"
 }
 
 variable "enable_automation" {

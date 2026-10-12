@@ -3,6 +3,7 @@ subscription_id     = "00000000-0000-0000-0000-000000000000"
 resource_group_name = "rxbridge-snowflake"
 # location          = "centralindia"   # default: the resource group's region
 docintel_sku        = "F0"
+# docintel_location = "centralindia"   # default; Document Intelligence is not offered in westindia
 enable_automation   = false
 
 # PHASE 2 - after 00_admin_setup.sql: client_id from AZURE_CONSENT_URL
